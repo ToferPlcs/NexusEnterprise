@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXUS ENTERPRISE - Multi-Bodega</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-slate-900 text-slate-200 font-sans">
+
+    <div id="login-view" class="h-screen w-full flex flex-col items-center justify-center bg-slate-900 z-50 absolute">
+        <h1 class="text-6xl font-bold text-white tracking-widest mb-2">NEXUS</h1>
+        <p class="text-blue-500 font-mono text-xl mb-8">ENTERPRISE EDITION V5.0</p>
+        <button onclick="loginWithGoogle()" class="px-8 py-4 bg-white text-slate-900 font-bold rounded-full hover:bg-gray-200 transition flex items-center gap-3 shadow-lg hover:shadow-blue-500/50">
+            <i class="fab fa-google"></i> Acceso Corporativo
+        </button>
+    </div>
+
+    <div id="app-view" class="hidden min-h-screen pb-20 relative">
+        
+        <header class="bg-slate-800 p-4 border-b border-slate-700 sticky top-0 z-40 flex flex-wrap justify-between items-center gap-4 shadow-md">
+            <div class="flex items-center gap-4">
+                <h2 class="text-2xl font-bold text-white tracking-wider">NEXUS</h2>
+                
+                <div class="flex items-center bg-slate-700 rounded border border-slate-600">
+                    <span class="pl-3 text-slate-400"><i class="fas fa-warehouse"></i></span>
+                    <select id="bodega-selector" onchange="app.renderTable()" class="bg-transparent text-white px-3 py-1 outline-none cursor-pointer">
+                        <option value="todas">🌎 Visión Global</option>
+                        </select>
+                </div>
+                <button onclick="app.toggleModal('modal-bodega')" class="bg-blue-600 hover:bg-blue-500 text-white w-8 h-8 rounded flex items-center justify-center font-bold" title="Nueva Bodega">+</button>
+            </div>
+
+            <div class="flex items-center gap-6 bg-slate-900/50 px-4 py-2 rounded-full border border-slate-700">
+                <button onclick="app.toggleView('dashboard')" id="btn-dashboard" class="text-blue-400 font-bold text-sm transition hover:text-white">INVENTARIO</button>
+                <button onclick="app.toggleView('analytics')" id="btn-analytics" class="text-slate-400 font-bold text-sm transition hover:text-white">ANALÍTICA</button>
+                <button onclick="app.toggleView('audit')" id="btn-audit" class="text-slate-400 font-bold text-sm transition hover:text-white">AUDITORÍA</button>
+            </div>
+
+            <button onclick="logout()" class="text-red-400 hover:text-red-300 transition" title="Cerrar Sesión"><i class="fas fa-power-off fa-lg"></i></button>
+        </header>
+
+        <main id="view-dashboard" class="p-6 max-w-7xl mx-auto block animate-fade-in">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
+                    <h3 class="text-xs text-slate-400 font-bold">TOTAL SKUs</h3>
+                    <p id="kpi-total" class="text-3xl font-bold text-white mt-2">0</p>
+                </div>
+                <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
+                    <h3 class="text-xs text-slate-400 font-bold">VALORIZACIÓN</h3>
+                    <p id="kpi-valor" class="text-3xl font-bold text-emerald-400 mt-2">$0</p>
+                </div>
+                <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
+                    <h3 class="text-xs text-slate-400 font-bold">BAJO STOCK</h3>
+                    <p id="kpi-alertas" class="text-3xl font-bold text-yellow-400 mt-2">0</p>
+                </div>
+                <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg border-l-4 border-l-red-500">
+                    <h3 class="text-xs text-slate-400 font-bold">AGOTADOS</h3>
+                    <p id="kpi-critico" class="text-3xl font-bold text-red-500 mt-2 animate-pulse">0</p>
+                </div>
+            </div>
+
+            <div class="flex flex-col md:flex-row gap-4 mb-6 justify-between">
+                <div class="flex gap-2 bg-slate-800 p-2 rounded-lg border border-slate-700 shadow-lg flex-1 overflow-x-auto">
+                    <input type="text" id="input-sku" placeholder="SKU" class="bg-slate-700 text-white px-3 py-2 rounded w-24 outline-none focus:ring-1 focus:ring-blue-500">
+                    <input type="text" id="input-name" placeholder="Nombre Producto" class="bg-slate-700 text-white px-3 py-2 rounded flex-1 min-w-[150px] outline-none focus:ring-1 focus:ring-blue-500">
+                    <input type="number" id="input-stock" placeholder="Cant." class="bg-slate-700 text-white px-3 py-2 rounded w-20 outline-none focus:ring-1 focus:ring-blue-500">
+                    <input type="number" id="input-cost" placeholder="Costo $" class="bg-slate-700 text-white px-3 py-2 rounded w-24 outline-none focus:ring-1 focus:ring-blue-500">
+                    <button onclick="app.addProduct()" class="bg-blue-600 hover:bg-blue-500 text-white px-5 rounded font-bold transition shadow-lg shadow-blue-600/20">+</button>
+                </div>
+                
+                <div class="flex gap-2">
+                    <input type="text" id="search-bar" onkeyup="app.renderTable()" placeholder="🔍 Buscar..." class="bg-slate-800 text-white px-4 py-2 rounded-lg border border-slate-700 outline-none focus:border-blue-500 w-full md:w-auto">
+                    <button onclick="app.generatePDF()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold shadow-lg flex items-center gap-2">
+                        <i class="fas fa-file-pdf"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-slate-800 rounded-xl overflow-hidden border border-slate-700 shadow-2xl">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-900/50 text-slate-400 text-xs uppercase tracking-wider">
+                                <th class="p-4 border-b border-slate-700">SKU</th>
+                                <th class="p-4 border-b border-slate-700">Producto</th>
+                                <th class="p-4 border-b border-slate-700">Bodega</th>
+                                <th class="p-4 border-b border-slate-700 text-center">Stock</th>
+                                <th class="p-4 border-b border-slate-700 text-center">Estado</th>
+                                <th class="p-4 border-b border-slate-700 text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventory-table-body" class="divide-y divide-slate-700 text-sm">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <main id="view-analytics" class="p-6 max-w-7xl mx-auto hidden animate-fade-in">
+            <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+                <div>
+                    <h2 class="text-3xl font-bold text-white">Comparativo Semanal</h2>
+                    <p class="text-slate-400 text-sm">Analiza el rendimiento histórico por bodega.</p>
+                </div>
+                <button onclick="app.takeWeeklySnapshot()" class="bg-purple-600 hover:bg-purple-500 text-white px-6 py-3 rounded-lg font-bold shadow-lg shadow-purple-600/20 flex items-center gap-2">
+                    <i class="fas fa-camera"></i> Cerrar Semana (Snapshot)
+                </button>
+            </div>
+
+            <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 mb-6 shadow-xl">
+                <div class="flex flex-wrap items-end gap-4">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1 uppercase font-bold">Semana Inicial</label>
+                        <select id="week-a-select" class="bg-slate-700 text-white px-4 py-2 rounded border border-slate-600 w-40">
+                            </select>
+                    </div>
+                    <div class="text-slate-500 font-bold pb-2">VS</div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1 uppercase font-bold">Semana Final</label>
+                        <select id="week-b-select" class="bg-slate-700 text-white px-4 py-2 rounded border border-slate-600 w-40">
+                            </select>
+                    </div>
+                    <button onclick="app.renderAnalytics()" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded font-bold h-10 shadow-lg">
+                        <i class="fas fa-chart-bar"></i> Comparar
+                    </button>
+                </div>
+                <p class="text-xs text-yellow-500 mt-2"><i class="fas fa-info-circle"></i> Nota: Selecciona una bodega específica en el menú superior para ver sus datos.</p>
+            </div>
+            
+            <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl relative h-[400px]">
+                <canvas id="comparisonChart"></canvas>
+            </div>
+        </main>
+
+        <main id="view-audit" class="p-6 max-w-7xl mx-auto hidden animate-fade-in">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                <i class="fas fa-shield-alt text-emerald-400"></i> Auditoría Forense
+            </h2>
+            <div class="bg-slate-800 rounded-xl border border-slate-700 h-[500px] overflow-y-auto p-4 shadow-xl custom-scrollbar" id="audit-log-container">
+                </div>
+        </main>
+    </div>
+
+    <div id="modal-bodega" class="fixed inset-0 bg-black/80 hidden flex items-center justify-center z-50 backdrop-blur-sm transition-opacity">
+        <div class="bg-slate-800 p-8 rounded-2xl border border-slate-600 w-96 shadow-2xl transform scale-100">
+            <h3 class="text-2xl font-bold mb-6 text-white">Nueva Bodega</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs text-slate-400 uppercase font-bold">Nombre Sucursal</label>
+                    <input type="text" id="new-warehouse-name" placeholder="Ej: Sucursal Centro" class="w-full bg-slate-700 px-4 py-3 rounded-lg text-white border border-slate-600 focus:border-blue-500 outline-none mt-1">
+                </div>
+                <div class="flex justify-end gap-3 mt-6">
+                    <button onclick="app.toggleModal('modal-bodega')" class="text-slate-400 hover:text-white px-4 py-2 font-bold">Cancelar</button>
+                    <button onclick="app.createWarehouse()" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg font-bold shadow-lg">Crear</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { bg: #1e293b; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { bg: #475569; border-radius: 4px; }
+        .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</body>
+</html>
