@@ -4,13 +4,7 @@ import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signO
 
 // --- 1. CONFIGURACIÓN FIREBASE ---
 const firebaseConfig = {
-  apiKey: "AIzaSyAv4-551jF2b9ulr2-YAjNDkj0q9qCFGL8",
-  authDomain: "nexus-bodega.firebaseapp.com",
-  projectId: "nexus-bodega",
-  storageBucket: "nexus-bodega.firebasestorage.app",
-  messagingSenderId: "956269067891",
-  appId: "1:956269067891:web:c7039f4cf8e3bbc6103406",
-  measurementId: "G-G4ZV8DM4X3"
+  
 };
 
 const app = initializeApp(firebaseConfig);
@@ -383,4 +377,5 @@ function populateWeekSelectors() {
 
     if(currA) selA.value = currA;
     if(currB) selB.value = currB;
+
 }
